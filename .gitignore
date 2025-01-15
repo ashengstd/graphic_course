@@ -1,0 +1,15 @@
+# Xmake cache
+.xmake/
+build/
+
+# MacOS Cache
+.DS_Store
+
+# cache
+*.cache
+
+# vscode
+.vscode/
+
+#complie_commands.json
+compile_commands.json
