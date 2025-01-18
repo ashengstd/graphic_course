@@ -1,0 +1,109 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage{geometry}
+\usepackage{ctex}
+\usepackage{fontspec}
+\usepackage{graphicx}
+\geometry{left=3cm, right=3cm, top=3cm, bottom=3cm}
+
+\usepackage{minted}
+\setminted{linenos=false, breaklines=true}
+\usemintedstyle{one-dark}
+\usepackage{mdframed}
+\surroundwithmdframed{minted}
+
+\begin{document}
+
+% 封面内容的整体居中
+\begin{titlepage}
+    \centering
+    \vspace*{3cm} % 调整顶部留白
+
+    % 标题部分
+    {\Huge \textbf{计算机图形学程序设计}\par}
+    \vspace{0.5cm}
+    {\Huge \textbf{实验报告}\par}
+
+    \vspace{8cm} % 调整中间留白
+
+    % 学号和姓名部分
+    {\Large
+    \begin{tabular}{rl}
+        学号： & 08212012 \\
+        姓名： & 任笙
+    \end{tabular}
+    \par}
+
+    \vfill % 调整底部留白，自动对齐到底部
+\end{titlepage}
+
+\section{实验目的}
+
+
+本实验旨在通过编程实现和可视化 \textbf{Bezier 曲线}，以加深对其数学原理及应用的理解。具体目标包括：
+\begin{enumerate}
+    \item 学习 \textbf{Bezier 曲线} 的定义及其通过组合数和 Bernstein 多项式生成的方法。
+    \item 使用分段的方式绘制高阶和低阶 Bezier 曲线，分析曲线的平滑性和连续性。
+    \item 探索控制点对 Bezier 曲线形状的影响，并通过程序输出 Bezier 曲线的函数表达式，展示控制点在曲线生成中的作用。
+\end{enumerate}
+
+\section{实验代码}
+\begin{minted}{cpp}
+// 计算阶乘
+int factorial(int n) {
+  if (n <= 1)
+    return 1;
+  return n * factorial(n - 1);
+}
+
+// 计算组合数 C(n, i)
+int combination(int n, int i) {
+  return factorial(n) / (factorial(i) * factorial(n - i));
+}
+
+// 计算 Bezier 曲线点
+Point bezierPoint(const vector<Point> &points, float t) {
+  int n = points.size() - 1;
+  Point p(0, 0);
+  for (int i = 0; i <= n; i++) {
+    float coef = combination(n, i) * pow(1 - t, n - i) * pow(t, i);
+    p.x += coef * points[i].x;
+    p.y += coef * points[i].y;
+  }
+  return p;
+}
+\end{minted}
+\section{实验结果}
+\subsection*{1. Bezier 曲线的函数表达式}
+实验程序通过数学公式计算并输出了控制点生成的 6 次 Bezier 曲线函数表达式，以及分段 3 次 Bezier 曲线的函数表达式。示例如下：
+\begin{itemize}
+    \item 6 次 Bezier 曲线（包含 7 个控制点）：
+    \[
+    x(t) = \sum_{i=0}^6 C(6, i) \cdot P_i.x \cdot (1-t)^{6-i} \cdot t^i
+    \]
+    \[
+    y(t) = \sum_{i=0}^6 C(6, i) \cdot P_i.y \cdot (1-t)^{6-i} \cdot t^i
+    \]
+    \item 分段 3 次 Bezier 曲线分别由前 4 个控制点和后 4 个控制点生成，其表达式类似，但次数为 3。
+\end{itemize}
+
+\subsection*{2. 可视化结果}
+\begin{itemize}
+    \item 在窗口中绘制了一条 \textbf{6 次 Bezier 曲线}，并展示了控制点的分布。
+    \item 曲线被分为两个 3 次 Bezier 曲线段，用不同颜色区分。
+    \item 整体曲线平滑且连续，且分段曲线间具备 1 阶连续性。
+\end{itemize}
+
+\subsection*{3. 控制点的影响}
+实验中，调整控制点的数量和位置可以显著改变曲线的形状，验证了控制点对 Bezier 曲线生成的决定性作用。
+
+\section*{总结}
+通过实验，我实现了 \textbf{Bezier 曲线} 的数学建模、表达式生成及其分段实现，验证了高阶曲线与低阶曲线的区别，并直观理解了控制点的作用。本实验加深了对计算机图形学中曲线生成理论的认识，并为后续复杂图形绘制提供了技术支持。
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.75\linewidth]{image.png}
+    \caption{Result}
+    \label{fig:enter-label}
+\end{figure}
+
+\end{document}

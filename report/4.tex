@@ -1,0 +1,178 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage{geometry}
+\usepackage{ctex}
+\usepackage{fontspec}
+\usepackage{graphicx}
+\geometry{left=3cm, right=3cm, top=3cm, bottom=3cm}
+\usepackage{amsmath}
+\usepackage{minted}
+\setminted{linenos=false, breaklines=true}
+\usemintedstyle{one-dark}
+\usepackage{mdframed}
+\surroundwithmdframed{minted}
+
+\begin{document}
+
+% 封面内容的整体居中
+\begin{titlepage}
+    \centering
+    \vspace*{3cm} % 调整顶部留白
+
+    % 标题部分
+    {\Huge \textbf{计算机图形学程序设计}\par}
+    {\Huge \textbf{图像旋转}\par}
+    \vspace{0.5cm}
+    {\Huge \textbf{实验报告}\par}
+
+    \vspace{8cm} % 调整中间留白
+
+    % 学号和姓名部分
+    {\Large
+    \begin{tabular}{rl}
+        学号： & 08212012 \\
+        姓名： & 任笙
+    \end{tabular}
+    \par}
+
+    \vfill % 调整底部留白，自动对齐到底部
+\end{titlepage}
+
+\section{实验目的}
+本实验的主要目的是实现一个基于Eigen和OpenCV的简单光栅化渲染器，完成以下功能：
+\begin{itemize}
+    \item 实现视图变换、模型变换和投影变换。
+    \item 支持绕任意轴的旋转操作。
+    \item 验证光栅化渲染器在生成2D图像中的表现。
+\end{itemize}
+
+
+\section{实验代码}
+\begin{minted}{python}
+Eigen::Matrix4f get_model_matrix(float rotation_angle) {
+  Eigen::Matrix4f model = Eigen::Matrix4f::Identity();
+
+  // 将角度转换为弧度
+  float radian = rotation_angle * MY_PI / 180.0;
+
+  // 构造绕 Z 轴的旋转矩阵
+  model << cos(radian), -sin(radian), 0, 0, sin(radian), cos(radian), 0, 0, 0,
+      0, 1, 0, 0, 0, 0, 1;
+
+  return model;
+}
+
+Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio,
+                                      float zNear, float zFar) {
+  Eigen::Matrix4f projection = Eigen::Matrix4f::Identity();
+  float angel = eye_fov / 180.0 * MY_PI;
+  float t = zNear * std::tan(angel / 2);
+  float r = t * aspect_ratio;
+  float l = -r;
+  float b = -t;
+
+  Eigen::Matrix4f MorthoScale(4, 4);
+  MorthoScale << 2 / (r - l), 0, 0, 0, 0, 2 / (t - b), 0, 0, 0, 0,
+      2 / (zFar - zNear), 0, 0, 0, 0, 1;
+
+  Eigen::Matrix4f MorthoPos(4, 4);
+  MorthoPos << 1, 0, 0, -(r + l) / 2, 0, 1, 0, -(t + b) / 2, 0, 0, 1,
+      -(zNear + zFar) / 2, 0, 0, 0, 1;
+
+  Eigen::Matrix4f Mpersp2ortho(4, 4);
+
+  Mpersp2ortho << zNear, 0, 0, 0, 0, zNear, 0, 0, 0, 0, zNear + zFar,
+      -zNear * zFar, 0, 0, 1, 0;
+
+  Eigen::Matrix4f Mt(4, 4);
+  Mt << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1;
+  Mpersp2ortho = Mpersp2ortho * Mt;
+
+  projection = MorthoScale * MorthoPos * Mpersp2ortho * projection;
+
+  return projection;
+
+  // Edit end
+}
+
+Eigen::Matrix4f get_rotation(Eigen::Vector3f axis, float angle) {
+  Eigen::Matrix4f rotation = Eigen::Matrix4f::Identity();
+
+  // 确保轴为单位向量
+  Eigen::Vector3f u = axis.normalized();
+
+  float cos_theta = std::cos(angle * MY_PI / 180.0);
+  float sin_theta = std::sin(angle * MY_PI / 180.0);
+
+  // 构造 [u]_x 矩阵
+  Eigen::Matrix3f ux;
+  ux << 0, -u.z(), u.y(), u.z(), 0, -u.x(), -u.y(), u.x(), 0;
+
+  // 构造 u * u^T
+  Eigen::Matrix3f uuT = u * u.transpose();
+
+  // 计算旋转矩阵
+  Eigen::Matrix3f R = cos_theta * Eigen::Matrix3f::Identity() +
+                      (1 - cos_theta) * uuT + sin_theta * ux;
+
+  // 将 3x3 旋转矩阵嵌入到 4x4 矩阵中
+  rotation.block<3, 3>(0, 0) = R;
+
+  return rotation;
+}
+\end{minted}
+
+\section{实验结果}
+通过实验，我们成功实现了各项变换功能，并基于简单的三角形顶点数据生成了对应的渲染图像。以下是主要实验结果和代码中的实现细节：
+
+\subsection*{视图变换}
+视图矩阵通过平移操作将观察者视点移动到世界坐标系原点。实现方法如下：
+\[
+\text{View Matrix} = 
+\begin{bmatrix}
+1 & 0 & 0 & -x \\
+0 & 1 & 0 & -y \\
+0 & 0 & 1 & -z \\
+0 & 0 & 0 & 1 \\
+\end{bmatrix}
+\]
+
+\subsection*{模型变换}
+模型变换支持绕任意轴旋转，通过Rodrigues公式实现。公式如下：
+\[
+\mathbf{R} = \cos\theta \mathbf{I} + (1-\cos\theta) \mathbf{u}\mathbf{u}^T + \sin\theta [\mathbf{u}]_x
+\]
+其中：
+\begin{itemize}
+    \item \(\mathbf{u}\) 是单位旋转轴向量。
+    \item \([\mathbf{u}]_x\) 是\(\mathbf{u}\)的叉乘矩阵。
+\end{itemize}
+
+\subsection*{投影变换}
+投影变换实现了从透视投影到正交投影的映射，并通过比例缩放和平移操作完成最终的正交投影。矩阵定义如下：
+\[
+\text{Projection Matrix} = M_\text{ortho-scale} \cdot M_\text{ortho-pos} \cdot M_\text{persp-to-ortho}
+\]
+
+\subsection*{渲染结果}
+实验中使用了简单的三角形数据，生成了以下光栅化图像：
+\begin{itemize}
+    \item 初始角度为0°时的渲染结果。
+    \item 随用户输入旋转角度变化的动态渲染结果。
+\end{itemize}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.75\linewidth]{0_degree.png}
+    \caption{0°的渲染结果}
+    \label{fig:0_degree}
+\end{figure}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.75\linewidth]{var.png}
+    \caption{角度旋转的结果}
+    \label{fig:var}
+\end{figure}
+\section*{总结}
+本实验完成了光栅化渲染器的基本功能实现，包括视图变换、模型变换和投影变换。代码中采用了Eigen库进行矩阵运算，并使用OpenCV实现图像输出。实验结果表明，该渲染器能够正确处理旋转变换及投影变换。未来工作可扩展至更复杂的几何体渲染及着色技术的引入。
+
+
+\end{document}

@@ -1,0 +1,177 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage{geometry}
+\usepackage{ctex}
+\usepackage{fontspec}
+\usepackage{graphicx}
+\geometry{left=3cm, right=3cm, top=3cm, bottom=3cm}
+
+\usepackage{minted}
+\setminted{linenos=false, breaklines=true}
+\usemintedstyle{one-dark}
+\usepackage{mdframed}
+\surroundwithmdframed{minted}
+
+\begin{document}
+
+% 封面内容的整体居中
+\begin{titlepage}
+    \centering
+    \vspace*{3cm} % 调整顶部留白
+
+    % 标题部分
+    {\Huge \textbf{计算机图形学程序设计}\par}
+    {\Huge \textbf{边框\&线填充}\par}
+    \vspace{0.5cm}
+    {\Huge \textbf{实验报告}\par}
+
+    \vspace{8cm} % 调整中间留白
+
+    % 学号和姓名部分
+    {\Large
+    \begin{tabular}{rl}
+        学号： & 08212012 \\
+        姓名： & 任笙
+    \end{tabular}
+    \par}
+
+    \vfill % 调整底部留白，自动对齐到底部
+\end{titlepage}
+
+\section{实验目的}
+本实验的目的是通过实现 \textbf{扫描线填充算法 (Scanline Fill Algorithm)}，深入理解计算机图形学中多边形填充的基本原理和实现方法。具体目标包括：
+\begin{enumerate}
+    \item 学习扫描线算法的工作流程，包括边表和活动边表的构建与更新。
+    \item 实现多边形的边框绘制及其内部填充。
+    \item 探讨边框像素的处理以及填充效率优化。
+\end{enumerate}
+
+\section{实验代码}
+\begin{minted}{cpp}
+void drawLine(int x1, int y1, int x2, int y2) {
+  int dx = x2 - x1;
+  int dy = y2 - y1;
+
+  int steps = max(abs(dx), abs(dy));
+  float xIncrement = dx / (float)steps;
+  float yIncrement = dy / (float)steps;
+
+  float x = x1;
+  float y = y1;
+
+  for (int i = 0; i <= steps; i++) {
+    setPixel(round(x), round(y));
+    x += xIncrement;
+    y += yIncrement;
+  }
+}
+void ScanlineFill() {
+  vector<Edge> edgeTable[maxHt];
+  int numVertices = LINE_NUM;
+
+  // 构建边表
+  for (int i = 0; i < numVertices; i++) {
+    int x1 = vertices[4 * i];
+    int y1 = vertices[4 * i + 1];
+    int x2 = vertices[4 * i + 2];
+    int y2 = vertices[4 * i + 3];
+
+    if (y1 == y2)
+      continue; // 跳过水平边
+
+    if (y1 > y2) {
+      swap(x1, x2);
+      swap(y1, y2);
+    }
+
+    Edge edge;
+    edge.yMax = y2;
+    edge.xMin = x1;
+    edge.slopeInverse = (float)(x2 - x1) / (y2 - y1);
+    edgeTable[y1].push_back(edge);
+  }
+
+  vector<Edge> activeEdgeTable;
+
+  // 扫描线填充
+  for (int y = 0; y < maxHt; y++) {
+    // 更新AET
+    for (auto it = activeEdgeTable.begin(); it != activeEdgeTable.end();) {
+      if (it->yMax == y) {
+        it = activeEdgeTable.erase(it);
+      } else {
+        it->xMin += it->slopeInverse;
+        ++it;
+      }
+    }
+
+    // 将新的边加入AET
+    activeEdgeTable.insert(activeEdgeTable.end(), edgeTable[y].begin(),
+                           edgeTable[y].end());
+
+    // 按xMin排序
+    sort(activeEdgeTable.begin(), activeEdgeTable.end(),
+         [](Edge a, Edge b) { return a.xMin < b.xMin; });
+
+    // 填充像素
+    for (size_t i = 0; i < activeEdgeTable.size(); i += 2) {
+      if (i + 1 >= activeEdgeTable.size())
+        break;
+
+      int xStart = ceil(activeEdgeTable[i].xMin);
+      int xEnd = floor(activeEdgeTable[i + 1].xMin);
+
+      // 跳过边框像素
+      for (int x = xStart; x <= xEnd; x++) {
+        // 边框检查：防止覆盖边框
+        bool isOnBorder = (x == round(activeEdgeTable[i].xMin)) ||
+                          (x == round(activeEdgeTable[i + 1].xMin));
+        if (!isOnBorder) {
+          setPixel(x, y);
+        }
+      }
+    }
+  }
+}
+\end{minted}
+\section{实验内容}
+本实验使用了以下关键方法：
+\begin{itemize}
+    \item 使用 \textbf{DDA 算法} 绘制多边形的边框。
+    \item 构建边表（Edge Table），将多边形的边按照起点的 $y$ 坐标组织并存储其最大 $y$ 值、最小 $x$ 值以及斜率倒数。
+    \item 使用扫描线逐行填充多边形内部像素，并通过活动边表（Active Edge Table, AET）动态维护当前扫描线的交点。
+    \item 跳过边框像素，确保填充过程中边框清晰可见。
+\end{itemize}
+
+\section{实验结果}
+\subsection*{1. 边框绘制}
+程序成功使用 DDA 算法绘制了多边形的边框，顶点序列如下：
+\[
+\{(200, 100), (400, 120), (480, 300), (300, 400), (120, 300), (200, 100)\}
+\]
+
+\subsection*{2. 内部填充}
+\begin{itemize}
+    \item 填充算法准确计算了多边形每一条扫描线与边框的交点。
+    \item 填充颜色与边框颜色不同（边框为绿色，填充为白色），实现了可视化效果的区分。
+    \item 边框像素未被覆盖，保留了清晰的轮廓。
+\end{itemize}
+
+\subsection*{3. 执行效率}
+在测试中，算法能够实时填充分辨率为 $500 \times 500$ 的窗口，展示了扫描线填充算法的高效性。
+
+\section*{总结}
+本实验通过实现扫描线填充算法，加深了对多边形填充机制的理解。扫描线算法通过使用边表和活动边表，成功实现了复杂多边形的快速填充。未来可以在以下方面优化：
+\begin{itemize}
+    \item 处理凹多边形的填充，以及特殊情况下的边界处理。
+    \item 支持颜色渐变填充，增强视觉效果。
+    \item 在更高分辨率下测试算法性能，并尝试硬件加速实现。
+\end{itemize}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.75\linewidth]{tianchong.png}
+    \caption{Result1}
+    \label{fig:enter-label}
+\end{figure}
+
+\end{document}

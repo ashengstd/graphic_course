@@ -1,0 +1,77 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage{geometry}
+\usepackage{ctex}
+\usepackage{fontspec}
+\usepackage{graphicx}
+\geometry{left=3cm, right=3cm, top=3cm, bottom=3cm}
+
+\usepackage{minted}
+\setminted{linenos=false, breaklines=true}
+\usemintedstyle{one-dark}
+\usepackage{mdframed}
+\surroundwithmdframed{minted}
+
+\begin{document}
+
+% 封面内容的整体居中
+\begin{titlepage}
+    \centering
+    \vspace*{3cm} % 调整顶部留白
+
+    % 标题部分
+    {\Huge \textbf{计算机图形学程序设计}\par}
+    {\Huge \textbf{Catmull-Clark算法}\par}
+    \vspace{0.5cm}
+    {\Huge \textbf{实验报告}\par}
+
+    \vspace{8cm} % 调整中间留白
+
+    % 学号和姓名部分
+    {\Large
+    \begin{tabular}{rl}
+        学号： & 08212012 \\
+        姓名： & 任笙
+    \end{tabular}
+    \par}
+
+    \vfill % 调整底部留白，自动对齐到底部
+\end{titlepage}
+
+\section{实验目的}
+本实验的目的是实现基于半边数据结构的 Catmull-Clark 细分算法，并验证其在几何建模中的有效性。通过在正方体模型上的测试，探索算法在生成平滑曲面方面的表现。
+
+\subsection*{Catmull-Clark 算法计算方法}
+Catmull-Clark 细分算法的基本步骤包括以下几个阶段：
+\begin{enumerate}
+    \item \textbf{面点计算}：对于网格中的每个多边形面，计算该面的所有顶点的平均值，得到新的面点。
+    \item \textbf{边点计算}：对于每条边，计算其两端顶点及其相邻两面面点的平均值，得到新的边点。
+    \item \textbf{顶点更新}：对于每个原始顶点，根据其相邻顶点、边和面点的加权平均值计算新的顶点位置。
+    \item \textbf{拓扑重构}：将原始网格重新连接为新的拓扑结构，其中每个原始多边形被细分为若干个更小的四边形。
+\end{enumerate}
+这种方法确保生成的细分曲面是 $C^2$ 连续的，适合描述复杂的自由曲面。
+
+\section{实验结果}
+实验仅在正方体模型上进行了测试，结果如下：
+
+\subsection*{原始模型与细分效果}
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.8\textwidth]{original_model.png}
+    \caption{原始正方体网格}
+\end{figure}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.8\textwidth]{subdivided_model.png}
+    \caption{细分后的平滑曲面}
+\end{figure}
+
+实验表明，Catmull-Clark 细分算法显著提升了模型表面的平滑度，同时保留了原始几何形状的整体结构。
+
+
+
+\section{总结}
+通过本实验，成功实现了基于半边数据结构的 Catmull-Clark 细分算法，并在正方体模型上验证了其性能。实验结果表明，该方法在生成高质量平滑曲面以及处理复杂几何拓扑方面具有显著优势。未来工作将聚焦于算法性能优化及其在更复杂模型上的应用。
+
+
+\end{document}
